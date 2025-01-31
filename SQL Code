@@ -1,0 +1,142 @@
+CREATE DATABASE MyDataBase;
+USE MyDataBase;
+
+#I imported the table via import wizard
+SELECT ï»¿State FROM corruption LIMIT 5;
+SELECT * FROM drug_use LIMIT 5;
+SELECT * FROM education LIMIT 5;
+SELECT * FROM poverty LIMIT 5;
+SELECT * FROM cost_of_living LIMIT 5;
+
+#Let's make all state columns use full names instead of abbreviations
+CREATE TABLE state_lookup (
+    state_abbr VARCHAR(2) PRIMARY KEY,
+    state_name VARCHAR(100)
+);
+
+-- Insert state mappings
+INSERT INTO state_lookup (state_abbr, state_name)
+VALUES
+('AL', 'Alabama'),
+('AK', 'Alaska'),
+('AZ', 'Arizona'),
+('AR', 'Arkansas'),
+('CA', 'California'),
+('CO', 'Colorado'),
+('CT', 'Connecticut'),
+('DE', 'Delaware'),
+('FL', 'Florida'),
+('GA', 'Georgia'),
+('HI', 'Hawaii'),
+('ID', 'Idaho'),
+('IL', 'Illinois'),
+('IN', 'Indiana'),
+('IA', 'Iowa'),
+('KS', 'Kansas'),
+('KY', 'Kentucky'),
+('LA', 'Louisiana'),
+('ME', 'Maine'),
+('MD', 'Maryland'),
+('MA', 'Massachusetts'),
+('MI', 'Michigan'),
+('MN', 'Minnesota'),
+('MS', 'Mississippi'),
+('MO', 'Missouri'),
+('MT', 'Montana'),
+('NE', 'Nebraska'),
+('NV', 'Nevada'),
+('NH', 'New Hampshire'),
+('NJ', 'New Jersey'),
+('NM', 'New Mexico'),
+('NY', 'New York'),
+('NC', 'North Carolina'),
+('ND', 'North Dakota'),
+('OH', 'Ohio'),
+('OK', 'Oklahoma'),
+('OR', 'Oregon'),
+('PA', 'Pennsylvania'),
+('RI', 'Rhode Island'),
+('SC', 'South Carolina'),
+('SD', 'South Dakota'),
+('TN', 'Tennessee'),
+('TX', 'Texas'),
+('UT', 'Utah'),
+('VT', 'Vermont'),
+('VA', 'Virginia'),
+('WA', 'Washington'),
+('WV', 'West Virginia'),
+('WI', 'Wisconsin'),
+('WY', 'Wyoming');
+
+#Now using this new state lookup table, let's change the abbreviated states in the drug table to full name
+UPDATE drug_use d
+JOIN state_lookup l
+ON d.state = l.state_abbr
+SET d.state = l.state_name;
+
+#Now let's do the same for the cost_of_living table
+UPDATE cost_of_living c
+JOIN state_lookup l
+ON c.state = l.state_abbr
+SET c.state = l.state_name;
+
+#Fixing the tables 'State; column from 'ii*?State' to State
+ALTER TABLE corruption
+CHANGE COLUMN state State VARCHAR(100);
+
+#Now let's add some keys
+ALTER TABLE cost_of_living
+ADD PRIMARY KEY (State(50));
+
+ALTER TABLE education
+ADD PRIMARY KEY (state(50));
+
+ALTER TABLE poverty
+ADD PRIMARY KEY (state(50));
+
+ALTER TABLE corruption
+ADD PRIMARY KEY (state(50), year);
+
+ALTER TABLE drug_use
+ADD PRIMARY KEY (state(50), year);
+
+ALTER TABLE corruption
+CHANGE COLUMN `Legal Corruption Aggregate` legal_corruption FLOAT;
+
+ALTER TABLE corruption
+CHANGE COLUMN `Illegal Corruption Aggregate` illegal_corruption FLOAT;
+
+ALTER TABLE poverty
+CHANGE COLUMN `Poverty Rate` poverty_rate FLOAT;
+
+ALTER TABLE education
+CHANGE COLUMN `Average Education Level` average_education_l FLOAT;
+
+#Queries to join data
+SELECT 
+    c.state, 
+    AVG(c.legal_corruption) AS avg_legal_corruption, 
+    AVG(c.illegal_corruption) AS avg_illegal_corruption, 
+    AVG(p.poverty_rate) AS avg_poverty_rate
+FROM corruption c
+JOIN poverty p ON c.state = p.state
+GROUP BY c.state
+ORDER BY avg_poverty_rate DESC;
+
+#add year
+SELECT 
+    c.state, 
+    c.Year,
+    c.legal_corruption, 
+    c.illegal_corruption, 
+    p.poverty_rate,
+    cl.Housing,
+    cl.Health,
+    e.average_education_l,
+    d.rate as drug_death_rate
+FROM corruption c
+JOIN poverty p ON c.state = p.state AND c.Year
+JOIN cost_of_living cl ON c.state = cl.state
+JOIN education e on c.state = e.state
+JOIN drug_use d ON  c.state = d.state AND c.year = d.year
+ORDER BY p.poverty_rate desc;
